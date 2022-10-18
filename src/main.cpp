@@ -6,6 +6,12 @@ bool button_is_pressed = 0;
 // Next time to send buttonpress signal.
 unsigned long next_pressed = 0;
 
+// Next time to pay attention to LED signals and consider starting a cycle.
+unsigned long ignore_led_until = 0;
+
+// Have we recently detected that the LED was off?
+unsigned long center_led_last_off = 0;
+
 // Should we run a debug loop that presses the button every 10 seconds?
 #define DEBUG_LOOP 0
 
@@ -48,27 +54,51 @@ void loop() {
   pinMode(BRAUN_BUTTON_PIN, INPUT_PULLUP);
   delay(5);
   button_is_pressed = !digitalRead(BRAUN_BUTTON_PIN);
-  Serial.print(button_is_pressed);
+  Serial.print("Btn:" + String(button_is_pressed));
   pinMode(BRAUN_BUTTON_PIN, OUTPUT);
 
   // Print out current LED intercept status...
   center_led_is_on = analogReadMilliVolts(CENTER_LED_PIN) < 2000;
-  Serial.print("\t");
-  Serial.print(center_led_is_on);
+  Serial.print("\tCenter_LED:" + String(center_led_is_on));
 
   // Start out our event loop...
   Serial.println("\tHello Braun Series 8 Dock Event Loop...");
+
+    // Check if the LED is blinking
+  if(!center_led_is_on) {
+    // LED is off, so log that.
+    center_led_last_off = time;
+  } else {
+    // Serial.print("LED is on! It was last off at ");
+    // Serial.println(center_led_last_off);
+    
+    // LED is on... check if it was last off <1.5s ago
+    if(time > (center_led_last_off + 5000)) {
+      // LED is on, and it's been more than 5s since it was off
+      
+      // Serial.println("LED was last off more than 5 seconds ago!");
+      
+      if(time > ignore_led_until) {
+        // Serial.println(time);
+        // Serial.println(ignore_led_until);
+      
+        // hard limit of how frequently this will be able to activate the cleaning
+        ignore_led_until = time + 10 * 60 * 1000;
+        Serial.println("Pressing the button for you!");
+        digitalWrite(BRAUN_BUTTON_PIN, HIGH);
+        delay(800);
+        digitalWrite(BRAUN_BUTTON_PIN, LOW);
+      }
+    }
+  }
   
   // If debug loop (press button every 10 seconds) is enabled, run this block.
   if(DEBUG_LOOP && time > next_pressed) {
-    
     // Print the time again, and that we're going to press the button.
     Serial.print(time);
     Serial.println("\tPressing that button...");
-    
     // Set the next button press time to 10 seconds in the future.
     next_pressed += 10000;
-
     // Press the button for 0.8 seconds.
     digitalWrite(GPIO_NUM_25, HIGH);
     delay(800);
