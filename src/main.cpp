@@ -3,24 +3,34 @@
 // Manual button press read status.
 bool button_is_pressed = 0;
 
-// Next time to send buttonpress signal.
-unsigned long next_pressed = 0;
-
-// Next time to pay attention to LED signals and consider starting a cycle.
-unsigned long ignore_led_until = 0;
-
-// Have we recently detected that the LED was off?
-unsigned long center_led_last_off = 0;
-
-// Should we run a debug loop that presses the button every 10 seconds?
+// Debug loop parameters
 #define DEBUG_LOOP 0
+#define DEBUG_LOOP_PERIOD 10*1000
+unsigned long debug_next_pressed = 0;
 
-// Pin assignments for LED read and button read/write
+// Pin assignments
 #define BRAUN_BUTTON_PIN GPIO_NUM_25
 #define CENTER_LED_PIN GPIO_NUM_34
+#define DOCK_STATUS_PIN GPIO_NUM_33
 
-// Variables for LED readings
+// Is the shaver currently docked? Is the center LED on?
+bool shaver_docked_pin_raw = 0;
 bool center_led_is_on = 0;
+int shaver_docked_confidence = 10; // -5:20
+bool shaver_is_docked = 0; // docked if confidence > 10
+
+// Button press function and tracker
+unsigned long button_last_pressed = 0;
+unsigned long last_cleaned = 0;
+unsigned long due_for_clean = 0;
+
+void button_press() {
+  button_last_pressed = millis();
+  last_cleaned = button_last_pressed; // TODO: read from motor leads.
+  digitalWrite(BRAUN_BUTTON_PIN, HIGH);
+  delay(800);
+  digitalWrite(BRAUN_BUTTON_PIN, LOW);
+}
 
 void setup() {
   // Set button pin to output, and turn it off.
@@ -29,16 +39,15 @@ void setup() {
 
   // The initial connection likely triggered a button press.
   // So, we press the button again to cancel that likely cycle run.
-  digitalWrite(BRAUN_BUTTON_PIN, HIGH);
-  delay(800);
-  digitalWrite(BRAUN_BUTTON_PIN, LOW);
+  button_press();
 
-  // Begin Serial communications. Wait 800ms to stabilize.
+  // Begin Serial communications. Wait 100ms to stabilize.
   Serial.begin(115200);
-  delay(800);
+  delay(100);
 
   // Set LED signal intercept pin modes...
   pinMode(CENTER_LED_PIN, INPUT);
+  pinMode(DOCK_STATUS_PIN, INPUT);
 }
 
 void loop() {
@@ -61,58 +70,56 @@ void loop() {
   center_led_is_on = analogReadMilliVolts(CENTER_LED_PIN) < 2000;
   Serial.print("\tCenter_LED:" + String(center_led_is_on));
 
-  // Start out our event loop...
-  Serial.println("\tHello Braun Series 8 Dock Event Loop...");
+  // Print out current dock status from top-right pin.
+  shaver_docked_pin_raw = analogReadMilliVolts(DOCK_STATUS_PIN) > 300;
+  
+  // Update shaver docked confidence and status
+  if(shaver_docked_pin_raw && shaver_docked_confidence<20) shaver_docked_confidence++;
+  if(!shaver_docked_pin_raw &&shaver_docked_confidence>-5) shaver_docked_confidence--;
+  shaver_is_docked = 1 ? shaver_docked_confidence > 10 : 0;
 
-    // Check if the LED is blinking
-  if(!center_led_is_on) {
-    // LED is off, so log that.
-    center_led_last_off = time;
-  } else {
-    // Serial.print("LED is on! It was last off at ");
-    // Serial.println(center_led_last_off);
-    
-    // LED is on... check if it was last off <1.5s ago
-    if(time > (center_led_last_off + 5000)) {
-      // LED is on, and it's been more than 5s since it was off
-      
-      // Serial.println("LED was last off more than 5 seconds ago!");
-      
-      if(time > ignore_led_until) {
-        // Serial.println(time);
-        // Serial.println(ignore_led_until);
-      
-        // hard limit of how frequently this will be able to activate the cleaning
-        ignore_led_until = time + 10 * 60 * 1000;
-        Serial.println("Pressing the button for you!");
-        digitalWrite(BRAUN_BUTTON_PIN, HIGH);
-        delay(800);
-        digitalWrite(BRAUN_BUTTON_PIN, LOW);
-      }
-    }
+  // If the last clean was at least N seconds ago, and shaver is not docked
+  // Then we are due for a clean M seconds after the shaver is docked again!
+  if(last_cleaned+1000*60*60<time && !shaver_is_docked) due_for_clean = time + 1000*60*30;
+
+  // If we're due for a clean, clean!
+  if(due_for_clean && time > due_for_clean) {
+    Serial.println("CLEANING!!!");
+    due_for_clean = 0;
+    button_press();
   }
   
+  // Print dock status
+  // Serial.print("\tDocked_RAW:" + String(shaver_docked_pin_raw));
+  // Serial.print("\tDocked_Confidence:" + String(shaver_docked_confidence));
+  Serial.print("\tDocked?:" + String(shaver_is_docked));
+
+  Serial.print("\tLast_Cleaned:" + String(last_cleaned));
+  Serial.print("\tDue_For_Clean:" + String(due_for_clean));
+
+  // Print when the button was last pressed
+  // Serial.print("\tButton_Last_Pressed:" + String(button_last_pressed));
+
+  // Start out our event loop...
+  Serial.println("\tHello Braun Series 8 Dock Event Loop...");
+  
   // If debug loop (press button every 10 seconds) is enabled, run this block.
-  if(DEBUG_LOOP && time > next_pressed) {
+  if(DEBUG_LOOP && time > debug_next_pressed) {
     // Print the time again, and that we're going to press the button.
     Serial.print(time);
     Serial.println("\tPressing that button...");
-    // Set the next button press time to 10 seconds in the future.
-    next_pressed += 10000;
-    // Press the button for 0.8 seconds.
-    digitalWrite(GPIO_NUM_25, HIGH);
-    delay(800);
-    digitalWrite(GPIO_NUM_25, LOW);
+    // Set the next button press time.
+    debug_next_pressed += DEBUG_LOOP_PERIOD;
+    // Press the button
+    button_press();
   }
 
   // If the physical button has been manually pressed, pass that signal through.
   if(button_is_pressed) {
     Serial.println("Passing through manual button press.");
-    digitalWrite(BRAUN_BUTTON_PIN, HIGH);
-    delay(800);
-    digitalWrite(BRAUN_BUTTON_PIN, LOW);
+    button_press();
   }
 
   // Wait before the next event loop runthrough.
-  delay(50);
+  delay(25);
 }
