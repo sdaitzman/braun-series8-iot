@@ -7,7 +7,11 @@ bool button_is_pressed = 0;
 unsigned long next_pressed = 0;
 
 // Should we run a debug loop that presses the button every 10 seconds?
-#define debug_loop 0
+#define debug_loop 1
+
+// Pin assignments for LED read and button read/write
+#define BRAUN_BUTTON_PIN GPIO_NUM_25
+#define CENTER_LED_PIN GPIO_NUM_34
 
 void setup() {
   // Begin Serial communications. Wait 800ms to stabilize.
@@ -15,8 +19,8 @@ void setup() {
   delay(800);
 
   // Set ESP32 pin 25 to output, and turn it off.
-  pinMode(GPIO_NUM_25, OUTPUT);
-  digitalWrite(GPIO_NUM_25, LOW);
+  pinMode(BRAUN_BUTTON_PIN, OUTPUT);
+  digitalWrite(BRAUN_BUTTON_PIN, LOW);
 }
 
 void loop() {
@@ -29,11 +33,11 @@ void loop() {
   // Switching to INPUT mode will cause the Braun Series 8 dock to read a press.
   // So, we make it such a brief press (5ms) that the unit simply ignores it.
   // Then switch back to the regular OUTPUT mode.
-  pinMode(GPIO_NUM_25, INPUT_PULLUP);
+  pinMode(BRAUN_BUTTON_PIN, INPUT_PULLUP);
   delay(5);
-  button_is_pressed = !digitalRead(GPIO_NUM_25);
+  button_is_pressed = !digitalRead(BRAUN_BUTTON_PIN);
   Serial.print(button_is_pressed);
-  pinMode(GPIO_NUM_25, OUTPUT);
+  pinMode(BRAUN_BUTTON_PIN, OUTPUT);
 
   // Start out our event loop...
   Serial.println("\tHello Braun Series 8 Dock Event Loop...");
@@ -57,9 +61,9 @@ void loop() {
   // If the physical button has been manually pressed, pass that signal through.
   if(button_is_pressed) {
     Serial.println("Passing through manual button press.");
-    digitalWrite(GPIO_NUM_25, HIGH);
+    digitalWrite(BRAUN_BUTTON_PIN, HIGH);
     delay(800);
-    digitalWrite(GPIO_NUM_25, LOW);
+    digitalWrite(BRAUN_BUTTON_PIN, LOW);
   }
 
   // Wait before the next event loop runthrough.
