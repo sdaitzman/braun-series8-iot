@@ -1,6 +1,9 @@
 #include <Arduino.h>
 
-// Next time to send buttonpress signal
+// Manual button press read status.
+bool button_is_pressed = 0;
+
+// Next time to send buttonpress signal.
 unsigned long next_pressed = 0;
 
 // Should we run a debug loop that presses the button every 10 seconds?
@@ -28,7 +31,8 @@ void loop() {
   // Then switch back to the regular OUTPUT mode.
   pinMode(GPIO_NUM_25, INPUT_PULLUP);
   delay(5);
-  Serial.print(digitalRead(GPIO_NUM_25));
+  button_is_pressed = !digitalRead(GPIO_NUM_25);
+  Serial.print(button_is_pressed);
   pinMode(GPIO_NUM_25, OUTPUT);
 
   // Start out our event loop...
@@ -49,5 +53,14 @@ void loop() {
     delay(800);
     digitalWrite(GPIO_NUM_25, LOW);
   }
+
+  // If the physical button has been manually pressed, pass that signal through.
+  if(button_is_pressed) {
+    Serial.println("Passing through manual button press.");
+    digitalWrite(GPIO_NUM_25, HIGH);
+    delay(800);
+    digitalWrite(GPIO_NUM_25, LOW);
+  }
+
   delay(50);
 }
