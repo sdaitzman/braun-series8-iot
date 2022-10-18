@@ -1,2 +1,2 @@
-# Braun Series 8 Shaver IOT... for some reason
+# Braun Series 8 Shaver Dock IOT... for some reason
 `¯\_(ツ)_/¯`
