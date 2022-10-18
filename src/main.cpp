@@ -62,5 +62,6 @@ void loop() {
     digitalWrite(GPIO_NUM_25, LOW);
   }
 
+  // Wait before the next event loop runthrough.
   delay(50);
 }
