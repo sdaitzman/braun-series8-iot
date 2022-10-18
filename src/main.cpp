@@ -7,7 +7,7 @@ bool button_is_pressed = 0;
 unsigned long next_pressed = 0;
 
 // Should we run a debug loop that presses the button every 10 seconds?
-#define debug_loop 1
+#define DEBUG_LOOP 1
 
 // Pin assignments for LED read and button read/write
 #define BRAUN_BUTTON_PIN GPIO_NUM_25
@@ -43,7 +43,7 @@ void loop() {
   Serial.println("\tHello Braun Series 8 Dock Event Loop...");
   
   // If debug loop (press button every 10 seconds) is enabled, run this block.
-  if(debug_loop && time > next_pressed) {
+  if(DEBUG_LOOP && time > next_pressed) {
     
     // Print the time again, and that we're going to press the button.
     Serial.print(time);
