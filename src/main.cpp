@@ -39,7 +39,7 @@ void setup() {
 
   // The initial connection likely triggered a button press.
   // So, we press the button again to cancel that likely cycle run.
-  button_press();
+  // button_press();
 
   // Begin Serial communications. Wait 100ms to stabilize.
   Serial.begin(115200);
@@ -67,8 +67,8 @@ void loop() {
   pinMode(BRAUN_BUTTON_PIN, OUTPUT);
 
   // Print out current LED intercept status...
-  center_led_is_on = analogReadMilliVolts(CENTER_LED_PIN) < 2000;
-  Serial.print("\tCenter_LED:" + String(center_led_is_on));
+  // center_led_is_on = analogReadMilliVolts(CENTER_LED_PIN) < 2000;
+  // Serial.print("\tCenter_LED:" + String(center_led_is_on));
 
   // Print out current dock status from top-right pin.
   shaver_docked_pin_raw = analogReadMilliVolts(DOCK_STATUS_PIN) > 300;
