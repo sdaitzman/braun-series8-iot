@@ -1,3 +1,4 @@
+#include "config.h"
 #include <Arduino.h>
 
 // Manual button press read status.
@@ -48,6 +49,7 @@ void setup() {
   // Set LED signal intercept pin modes...
   pinMode(CENTER_LED_PIN, INPUT);
   pinMode(DOCK_STATUS_PIN, INPUT);
+  Serial.println("Will attempt to connect to network SSID: " + String(NETWORK_SSID));
 }
 
 void loop() {

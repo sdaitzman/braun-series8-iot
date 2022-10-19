@@ -386,3 +386,6 @@ $RECYCLE.BIN/
 .vscode/c_cpp_properties.json
 .vscode/extensions.json
 .vscode/launch.json
+
+# DO NOT COMMIT src/config.h as it will contain secrets
+src/config.h
