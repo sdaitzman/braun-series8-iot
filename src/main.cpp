@@ -80,7 +80,7 @@ void loop() {
 
   // If the last clean was at least N seconds ago, and shaver is not docked
   // Then we are due for a clean M seconds after the shaver is docked again!
-  if(last_cleaned+1000*60*60<time && !shaver_is_docked) due_for_clean = time + 1000*60*30;
+  if(last_cleaned+1000*60*60<time && !shaver_is_docked) due_for_clean = time + 1000*30;
 
   // If we're due for a clean, clean!
   if(due_for_clean && time > due_for_clean) {
