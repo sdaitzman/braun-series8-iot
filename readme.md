@@ -1,7 +1,7 @@
 # Braun Series 8 Shaver Dock IOT... for some reason
 `¯\_(ツ)_/¯`
 
-It's just an experiment so far. Use PlatformIO to build. Supports Braun 5430 dock. Requires manual soldering to traces on the control board. If you also want to try this, for some reason, send me an email and I'll update this with instructions.
+It's just an experiment so far. Use PlatformIO to build. Supports Braun 5430 dock. Requires manual soldering to traces on the control board. If you also want to try this, for some reason, send me an email and I'll update this with instructions. This is provided without *any* warranty or guarantees. This code is made for an ESP8266 or ESP32 board. For some further control, the ESP32 will be necessary.
 
 Supported features so far:
 - [x] Press the button (gets current status through LED signals, and can start the shaver clean cycle)

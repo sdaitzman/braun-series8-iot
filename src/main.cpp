@@ -10,9 +10,17 @@ bool button_is_pressed = 0;
 unsigned long debug_next_pressed = 0;
 
 // Pin assignments
-#define BRAUN_BUTTON_PIN GPIO_NUM_25
-#define CENTER_LED_PIN GPIO_NUM_34
-#define DOCK_STATUS_PIN GPIO_NUM_33
+#define ISESP8266 // ISESP32 or ISESP8266
+
+#ifdef ISESP32
+  #define BRAUN_BUTTON_PIN GPIO_NUM_25
+  #define DOCK_STATUS_PIN GPIO_NUM_33
+#endif
+
+#ifdef ISESP8266
+  #define BRAUN_BUTTON_PIN 14                    
+  #define DOCK_STATUS_PIN A0
+#endif
 
 // Is the shaver currently docked? Is the center LED on?
 bool shaver_docked_pin_raw = 0;
@@ -47,7 +55,6 @@ void setup() {
   delay(100);
 
   // Set LED signal intercept pin modes...
-  pinMode(CENTER_LED_PIN, INPUT);
   pinMode(DOCK_STATUS_PIN, INPUT);
   Serial.println("Will attempt to connect to network SSID: " + String(NETWORK_SSID));
 }
@@ -68,12 +75,14 @@ void loop() {
   Serial.print("Btn:" + String(button_is_pressed));
   pinMode(BRAUN_BUTTON_PIN, OUTPUT);
 
-  // Print out current LED intercept status...
-  // center_led_is_on = analogReadMilliVolts(CENTER_LED_PIN) < 2000;
-  // Serial.print("\tCenter_LED:" + String(center_led_is_on));
-
   // Print out current dock status from top-right pin.
-  shaver_docked_pin_raw = analogReadMilliVolts(DOCK_STATUS_PIN) > 300;
+  #ifdef ISESP32
+    shaver_docked_pin_raw = analogReadMilliVolts(DOCK_STATUS_PIN) > 300;
+  #endif
+
+  #ifdef ISESP8266
+    shaver_docked_pin_raw = analogRead(DOCK_STATUS_PIN) > 90;
+  #endif
   
   // Update shaver docked confidence and status
   if(shaver_docked_pin_raw && shaver_docked_confidence<20) shaver_docked_confidence++;
@@ -92,8 +101,8 @@ void loop() {
   }
   
   // Print dock status
-  // Serial.print("\tDocked_RAW:" + String(shaver_docked_pin_raw));
-  // Serial.print("\tDocked_Confidence:" + String(shaver_docked_confidence));
+  Serial.print("\tDocked_RAW:" + String(shaver_docked_pin_raw));
+  Serial.print("\tDocked_Confidence:" + String(shaver_docked_confidence));
   Serial.print("\tDocked?:" + String(shaver_is_docked));
 
   Serial.print("\tLast_Cleaned:" + String(last_cleaned));
