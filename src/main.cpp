@@ -37,9 +37,11 @@ unsigned long due_for_clean = 0;
 void button_press() {
   button_last_pressed = millis();
   last_cleaned = button_last_pressed; // TODO: read from motor leads.
+  analogWrite(15, 0);
   digitalWrite(BRAUN_BUTTON_PIN, HIGH);
   delay(800);
   digitalWrite(BRAUN_BUTTON_PIN, LOW);
+  analogWrite(15, 512);
 }
 
 void setup() {
@@ -58,6 +60,10 @@ void setup() {
   // Set LED signal intercept pin modes...
   pinMode(DOCK_STATUS_PIN, INPUT);
   Serial.println("Will attempt to connect to network SSID: " + String(NETWORK_SSID));
+
+  // TODO: limit this to Wemos S2 mini board only
+  pinMode(15, OUTPUT);
+  analogWrite(15, 512);
 }
 
 void loop() {
