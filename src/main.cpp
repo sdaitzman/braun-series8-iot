@@ -91,8 +91,9 @@ void loop() {
   shaver_is_docked = 1 ? shaver_docked_confidence > 10 : 0;
 
   // If the last clean was at least N seconds ago, and shaver is not docked
+  // OR if we are in the first hour of power, and shaver is not docked...
   // Then we are due for a clean M seconds after the shaver is docked again!
-  if(/*last_cleaned+1000*60*60<time &&*/ !shaver_is_docked) due_for_clean = time + 1000*3;
+  if((last_cleaned+1000*60*60<time || time<1000*60*60) && !shaver_is_docked) due_for_clean = time + 1000*30;
 
   // If we're due for a clean, clean!
   if(due_for_clean && time > due_for_clean) {
