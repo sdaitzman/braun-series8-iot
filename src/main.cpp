@@ -1,5 +1,9 @@
 #include "config.h"
 #include <Arduino.h>
+#include <WiFi.h>
+#include <ESPmDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 
 // Manual button press read status.
 bool button_is_pressed = 0;
@@ -34,6 +38,12 @@ unsigned long button_last_pressed = 0;
 unsigned long last_cleaned = 0;
 unsigned long due_for_clean = 0;
 
+void setLED(int brightness) {
+  #ifdef CONTROLLER_LED_PIN
+    analogWrite(CONTROLLER_LED_PIN, brightness);
+  #endif
+}
+
 void button_press() {
   button_last_pressed = millis();
   // TODO: more intelligent logic that accounts for button presses that just
@@ -41,16 +51,13 @@ void button_press() {
   if(shaver_is_docked) last_cleaned = button_last_pressed;
 
   // Blink LED off, if present, and press button
-  #ifdef CONTROLLER_LED_PIN
-    analogWrite(CONTROLLER_LED_PIN, 0);
-  #endif
+  setLED(0);
   digitalWrite(BRAUN_BUTTON_PIN, HIGH);
   delay(800);
   digitalWrite(BRAUN_BUTTON_PIN, LOW);
-  #ifdef CONTROLLER_LED_PIN
-    analogWrite(CONTROLLER_LED_PIN, 512);
-  #endif
+  setLED(512);
 }
+
 
 void setup() {
   // Set initial pin statuses...
@@ -59,19 +66,66 @@ void setup() {
   pinMode(DOCK_STATUS_PIN, INPUT);
   #ifdef CONTROLLER_LED_PIN
     pinMode(CONTROLLER_LED_PIN, OUTPUT);
-    analogWrite(CONTROLLER_LED_PIN, 512);
   #endif
+  setLED(512);
 
   // Startup can trigger false press. Uncomment to cancel that false press.
   // button_press();
 
-  // Begin Serial communications. Wait 100ms to stabilize.
+  // Begin Serial communications. Wait for serial connection to stabilize.
   Serial.begin(115200);
-  delay(100);
+  for(int i = 0; i < 100; i++) {
+    delay(25);
+    Serial.print(".");
+  }
 
+  // Attempt network connection
+  setLED(0);
+  Serial.println("Will attempt to connect to network SSID: " + String(NETWORK_SSID));
+  delay(500);
+  WiFi.mode(WIFI_STA);
+  Serial.println("Set WiFI mode to WIFI_STA");
+  delay(500);
+  WiFi.begin(NETWORK_SSID, NETWORK_PSK);
+  delay(500);
+  Serial.println("Began WIFi Connection...");
+  delay(500);
+  while(WiFi.waitForConnectResult() != WL_CONNECTED) {
+    Serial.println("WiFi connection failed~ Rebooting...");
+    delay(5000);
+    ESP.restart(); // TODO: rather than rebooting, continue and normal and attempt reconnect later
+  }
+  Serial.println("Setting hostname...");
+  ArduinoOTA.setHostname(DEVICE_HOSTNAME);
+  Serial.println("WiFi Connected!");
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.println("Hostname: " + String(DEVICE_HOSTNAME));
+  delay(200);
+  ArduinoOTA.onStart([]() {
+    String type;
+    if(ArduinoOTA.getCommand() == U_FLASH)
+      type = "sketch";
+    else // U_SPIFFS
+      type = "filesystem";
+    Serial.println("Updating: " + type);
+  }).onEnd([]() {
+    Serial.println("\nEnd OTA!");
+  }).onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  }).onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+  });
+  ArduinoOTA.begin();
 }
 
 void loop() {
+  ArduinoOTA.handle(); // Handle OTA if needed...
   unsigned long time = millis(); // Get the current time
   
   // Make this read so brief (5ms) that the unit ignores the erroneous press...
@@ -134,9 +188,14 @@ void loop() {
   Serial.print("\tLast_Cleaned:" + String(last_cleaned));
   Serial.print("\tDue_For_Clean:" + String(due_for_clean));
   // Serial.print("\tButton_Last_Pressed:" + String(button_last_pressed));
+  Serial.print("\tIP: ");
+  Serial.print(WiFi.localIP());
+  Serial.print("\tHostname: " + String(DEVICE_HOSTNAME));
   Serial.println("\tHello Braun Series 8 Dock Event Loop. ");
   
 
   // Wait before the next event loop runthrough.
+  setLED(0);
   delay(25);
+  setLED(512);
 }
