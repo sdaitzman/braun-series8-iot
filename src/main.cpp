@@ -4,6 +4,10 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <WebSerial.h>
+
 
 // Manual button press read status.
 bool button_is_pressed = 0;
@@ -38,6 +42,9 @@ unsigned long button_last_pressed = 0;
 unsigned long last_cleaned = 0;
 unsigned long due_for_clean = 0;
 
+// WebSerial server
+AsyncWebServer server(80);
+
 void setLED(int brightness) {
   #ifdef CONTROLLER_LED_PIN
     analogWrite(CONTROLLER_LED_PIN, brightness);
@@ -58,6 +65,21 @@ void button_press() {
   setLED(512);
 }
 
+// WebSerial receive message, source https://randomnerdtutorials.com/esp32-webserial-library/
+void recvMsg(uint8_t *data, size_t len){
+  WebSerial.println("Received Data...");
+  String d = "";
+  for(int i=0; i < len; i++){
+    d += char(data[i]);
+  }
+  WebSerial.println(d);
+  // if (d == "ON"){
+  //   digitalWrite(LED, HIGH);
+  // }
+  // if (d=="OFF"){
+  //   digitalWrite(LED, LOW);
+  // }
+}
 
 void setup() {
   // Set initial pin statuses...
@@ -84,8 +106,8 @@ void setup() {
   Serial.println("Will attempt to connect to network SSID: " + String(NETWORK_SSID));
   delay(500);
   WiFi.mode(WIFI_STA);
-  Serial.println("Set WiFI mode to WIFI_STA");
   delay(500);
+  Serial.println("Set WiFI mode to WIFI_STA");
   WiFi.begin(NETWORK_SSID, NETWORK_PSK);
   delay(500);
   Serial.println("Began WIFi Connection...");
@@ -122,6 +144,11 @@ void setup() {
     else if (error == OTA_END_ERROR) Serial.println("End Failed");
   });
   ArduinoOTA.begin();
+
+  // WebSerial config
+  WebSerial.begin(&server);
+  WebSerial.msgCallback(recvMsg);
+  server.begin();
 }
 
 void loop() {
@@ -192,6 +219,9 @@ void loop() {
   Serial.print(WiFi.localIP());
   Serial.print("\tHostname: " + String(DEVICE_HOSTNAME));
   Serial.println("\tHello Braun Series 8 Dock Event Loop. ");
+
+  WebSerial.print(String(time));
+  WebSerial.println("\tHello!");
   
 
   // Wait before the next event loop runthrough.
